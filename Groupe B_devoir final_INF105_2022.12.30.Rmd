@@ -1,0 +1,196 @@
+---
+title: "Devoir accentué sur quelques données de la Banque mondiale"
+author: "CONDE Aïssa Coralie M., DOLBRUN Ymca, FILS-AIME Melissa, JEUDY Anne-Valerie et MERVEIL Jimmy"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+---
+# Introduction
+
+S’intéresser au PIB d’Haïti permet au mieux de comprendre son évolution économique puisqu’il nous permet de mesurer la richesse créée à un temps donné.
+
+Cependant d’autres indicateurs ou variables ont une certaine influence au PIB tels que: le commerce, l’investissement et l’inflation.
+
+Le commerce met en relief les échanges non seulement de manière interne(nationale) mais aussi externe, mettant en lumière la dynamique économique d’un pays, il est donc un moteur de croissance économique.
+
+L’inflation quant à elle, implique beaucoup de théories qui permettent d’expliquer la santé économique d’un pays, en entretenant une relation positive avec le PIB car plus elle augmente, plus le PIB augmente.
+
+Parler d’investissement fait référence à acquisition d’actifs nécessaires pour la productions de biens et de services pour servir l’économie, or plus la production augmente, plus la croissance est importante.
+
+
+
+
+## Affichage des packages
+```{r}
+library(wbstats)
+library(WDI)
+library(plotly)
+library(ggplot2)
+library(expss)
+library(broom)
+library(knitr)
+library(kableExtra)
+```
+
+
+
+
+## Recherche des variales PIB, Commerce, Investissement direc étranger, Inflation
+
+```{r}
+PIB<- wbstats::wb_search("GDP") 
+
+
+Commerce<- wbstats::wb_search(".trade")
+
+
+FDI<- wbstats::wb_search("Foreign direct investment")
+
+
+Inflation<- wbstats::wb_search("Inflation")
+
+
+```
+
+
+
+## Formation d'un dataframe pour les variables
+
+```{r}
+Df<- wbstats::wb_data( indicator =c("NY.GDP.MKTP.CD","BG.GSR.NFSV.GD.ZS","BX.KLT.DINV.WD.GD.ZS", "FP.CPI.TOTL.ZG"),country = "HTI", mrv = 35)       
+Df<- Df[,-c(1,2)]
+colnames(Df)<-c("Pays","Annee","Commerce","Investissement","Inflation","PIB")
+Df
+```
+
+
+
+
+## Lien entre les differentes variables 
+
+### PIB et Commerce
+```{r}
+PIB_trade<- lm(formula= PIB~Commerce, data = Df)           
+PIB_trade                                                   
+```
+
+
+
+### PIB et Investissement direct étranger
+```{r}
+PIB_FDI<- lm(formula= PIB~Investissement, data = Df) 
+PIB_FDI                                                    
+```
+
+
+
+### PIB et Inflation
+ 
+```{r}
+PIB_Inflation<- lm(formula = PIB~Inflation, data = Df )
+PIB_Inflation 
+
+```
+
+
+
+## Création des graphiques en nuage de points
+
+### Création du 1er graphique
+
+```{r}
+use_labels(Df, plot(PIB~Commerce))
+abline(PIB_trade, col="dodger blue", lwd=2)
+```
+
+## Création du 2e graphique
+
+```{r}
+use_labels(Df,plot(PIB~Investissement))
+abline(PIB_FDI, col="red", lwd=2)
+```
+
+
+
+## Création du 3e graphique
+
+```{r}
+use_labels(Df, plot(PIB~Inflation))
+abline(PIB_Inflation, col="blue",lwd=2)
+```
+
+
+
+## Présentation dans un tableau les résultats de l'indicateur qui nous intéresse
+
+
+#### Extraction des coefficients et les probabilités
+
+```{r}
+Reg<- summary(lm( PIB~ Commerce+Investissement+Inflation, data = Df))
+Reg
+
+```
+
+
+
+#### coefficients et probabilites
+```{r}
+coeffg<-summary(lm( PIB~ Commerce+Investissement+Inflation, data = Df))$coefficients[,1]
+coeffg
+
+Prob<-summary(lm( PIB~ Commerce+Investissement+Inflation, data = Df))$coefficients[,4]
+Prob
+```
+
+
+#### Extraction du R^2 ajusté, la statistique dde Fisher et sa probabilité
+
+```{r}
+R_ajustg<- summary(lm(PIB~ Commerce+Investissement+Inflation, data=Df))$adj.r.squared 
+R_ajustg
+
+Stat_Fg<-summary(lm(PIB~ Commerce+Investissement+Inflation, data=Df))$fstatistic[1]
+Stat_Fg
+
+p_valueg<- pf(Reg$fstatistic[1],
+              Reg$fstatistic[2],
+              Reg$fstatistic[3],
+              lower.tail = FALSE)
+p_valueg
+```
+
+#### Formation du Tableau
+
+```{r}
+DATA<-data.frame(coeffg,Prob,R_ajustg,Stat_Fg,p_valueg)
+colnames(DATA)<-c("Coefficients","Probabilités","R^2 ajusté","Statistique Fisher","Probabilité Fisher")
+DATA
+```
+
+
+
+#### Réalisation d'un graphique en nuage de points mettant en relation les valeurs résiduelles et les valeurs estimées
+
+
+```{r}
+Reg<- lm(formula = PIB~ Commerce+Investissement+Inflation, data = Df)
+Reg
+
+Residuals<-resid(Reg)
+Residuals
+```
+
+
+
+```{r}
+plot(fitted(Reg),Residuals)
+
+abline(0,0)
+```
+
+
+## Commentaire
+Le graphique résidus vs ajustement est couramment utilisé pour détecter la non-linéarité, les variances d'erreur inégales et les valeurs aberrantes.
+
+Le graphe ci-dessus montre comment les différents points sont légèrement éparpillés par rapport à la ligne, ce qui implique que le modèle de régression lineaire est moins adapté aux données choisies précédemment.
